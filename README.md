@@ -8,7 +8,7 @@ Everything what I wanted but what wasn't avaliable from the box is here.
 
 How to run: 
 
-docker run -v configs:/configs/ 5631/githound --dig-commits --dig-files --subdomain-file domains.txt --config-file /configs/githoundconfig.yml
+docker run --rm -v configs:/configs/ -v dockerresults:/dockerresults 5631/githound --dig-commits --dig-files --subdomain-file domains.txt --config-file /configs/githoundconfig.yml
 
 configs is your host path/docker volume with sudbomains+github user config files
 
