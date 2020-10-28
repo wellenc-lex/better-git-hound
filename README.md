@@ -1,3 +1,18 @@
+A better version of the Tillson's https://github.com/tillson/git-hound
+
+Whats new:
+Docker support.
+Better regexes + filenames + output filtering(false-positive/unimportant strings).
+
+Everything what I wanted but what wasn't avaliable from the box is here.
+
+How to run: 
+
+docker run -v configs:/configs/ 5631/githound --dig-commits --dig-files --subdomain-file domains.txt --config-file /configs/githoundconfig.yml
+
+configs is your host path/docker volume with sudbomains+github user config files
+
+
 # GitHound
 
 A batch-catching, pattern-matching, patch-attacking secret snatcher.
