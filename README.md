@@ -12,7 +12,7 @@ docker run -v configs:/configs/ 5631/githound --dig-commits --dig-files --subdom
 
 configs is your host path/docker volume with sudbomains+github user config files
 
-
+Tillson's Readme:
 # GitHound
 
 A batch-catching, pattern-matching, patch-attacking secret snatcher.
