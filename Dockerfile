@@ -2,7 +2,7 @@ FROM golang:alpine
 
 WORKDIR /app
 
-COPY git-hound .
+COPY . .
 
 RUN go build -o main .
 

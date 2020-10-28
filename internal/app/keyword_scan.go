@@ -107,7 +107,7 @@ func MatchKeywords(source string) (matches []Match) {
 		"|db_username|db_password|socks5:" +
 		"|hooks.slack.com|pt_token|full_resolution_time_in_minutes" +
 		"|xox[a-zA-Z]-[a-zA-Z0-9-]+" +
-		"|s3.console.aws.amazon.com\\/s3\\/buckets" +
+		"|s3\\.console\\.aws\\.amazon\\.com" +
 		"|JEKYLL_GITHUB_TOKEN|codecov_token|connectionstring|consumer_key|github_token|irc_pass|node_env|npmrc _auth" +
 		"|x-api-key|HEROKU_API_KEY)" //|[\\w\\.=-]+@" + regexp.QuoteMeta(result.Query) + ")\\b"
 	regex = regexp.MustCompile(regexString)
@@ -163,6 +163,10 @@ func MatchAPIKeys(source string) (matches []Match) {
 			if containsVariablepassword(match[2]) {
 				continue
 			}
+			
+			if LineContainsCommon(source) {
+				continue
+			}
 
 			matches = append(matches, Match{
 				KeywordType: "apiKey",
@@ -211,7 +215,7 @@ func MatchFileExtensions(source string, result RepoSearchResult) (matches []Matc
 	if GetFlags().NoFiles || source == "" {
 		return matches
 	}
-	regexString := "(?i)(credentials|deployment-config.json|filezilla.xml|id_rsa|pgpass|vpn|.vpn|.ovpn|pg_pass|secrets.yml|vim_settings.xml|mysql_history|terraform.tfvars|database.yml|secret_token.rb|connections.xml|(.(zip|dockercfg|cshrc|ftpconfig|pgpass|remote-sync.json|s3cfg|git-credentials|env|conf|htpasswd|log|exports|ovpn|cscfg|rdp|mdf|sdf|jks|tblk)))$"
+	regexString := "(?i)(credentials|deployment-config\\.json|filezilla\\.xml|id_rsa|pgpass|vpn|\\.vpn|\\.ovpn|pg_pass|secrets\\.yml|vim_settings\\.xml|mysql_history|terraform\\.tfvars|database\\.yml|secret_token\\.rb|connections\\.xml|(\\.(zip|dockercfg|cshrc|ftpconfig|pgpass|remote-sync\\.json|s3cfg|git-credentials|env|conf|htpasswd|log|exports|ovpn|cscfg|rdp|mdf|sdf|jks|tblk)))$"
 	regex := regexp.MustCompile(regexString)
 	// fmt.Println(source)
 	matchStrings := regex.FindAllStringSubmatch(source, -1)
@@ -316,36 +320,36 @@ func GetMatchesForString(source string, result RepoSearchResult) (matches []Matc
 		}
 	}
 	if !GetFlags().NoScoring {
-		matched, err := regexp.MatchString("(?i)(phishing|defenceblocklist|block|list|h1domains|bugbounty|bug-bounty|bounty-targets|url_short|url_list|alexa|twitter|blacklists|blacklist)", result.Repo+result.File)
+		matched, err := regexp.MatchString("(?i)(phishing|defenceblocklist|block|list|rumors|h1domains|bugbounty|bug-bounty|bounty-targets|url_short|url_list|alexa|twitter|blacklists|blacklist)", result.Repo+result.File)
 		CheckErr(err)
 		if matched {
 			score -= 5
 		}
-		matched, err = regexp.MatchString("(?i)(.md|.csv)$", result.File)
+		matched, err = regexp.MatchString("(?i)(\\.md|\\.csv)$", result.File)
 		CheckErr(err)
 		if matched {
 			score -= 2
 		}
-		matched, err = regexp.MatchString("^vim_settings.xml$", result.File)
+		matched, err = regexp.MatchString("^vim_settings\\.xml$", result.File)
 		CheckErr(err)
 		if matched {
 			score += 5
 		}
 		if len(matches) > 0 {
-			matched, err = regexp.MatchString("(?i).(json|yml|py|rb|java|go|php|xml|env|js)$", result.File)
+			matched, err = regexp.MatchString("(?i)\\.(json|yml|py|rb|java|go|php|xml|env|js)$", result.File)
 			CheckErr(err)
 			if matched {
 				score++
 			}
-			matched, err = regexp.MatchString("(?i).(htpasswd|ftpconfig|mysql_history)$", result.File)
+			matched, err = regexp.MatchString("(?i)\\.(htpasswd|ftpconfig|mysql_history)$", result.File)
 			CheckErr(err)
 			if matched {
 				score += 3
 			}
 		}
 		regex := regexp.MustCompile("(alexa|urls|adblock|domain|dns|top1000|top-1000|httparchive" +
-			"|blacklist|hosts|blacklists|twitter|ads|whitelist|crunchbase|tweets|tld|hosts.txt" +
-			"|host.txt|aquatone|recon-ng|hackerone|bugcrowd|xtreme|list|tracking|malicious|ipv(4|6)|host.txt)")
+			"|blacklist|hosts|blacklists|rumor|ads|whitelist|crunchbase|tweets|tld|hosts\\.txt" +
+			"|host\\.txt|aquatone|recon-ng|hackerone|bugcrowd|xtreme|list|tracking|malicious|ipv(4|6)|host\\.txt)")
 		fileNameMatches := regex.FindAllString(result.File, -1)
 		CheckErr(err)
 		if len(fileNameMatches) > 0 {
@@ -392,9 +396,21 @@ var rag *regexp.Regexp
 
 func containsVariablepassword(str string) bool {
 	if rag == nil {
-		rag = regexp.MustCompile("(?i)(env.|config.|secrets.)")
+		rag = regexp.MustCompile("(?i)((env\\.)|(config\\.)|(secrets\\.)|(timestamp_secret)|(refresh_token))")
 	}
 	if rag.FindString(str) != "" {
+		return true
+	}
+	return false
+}
+
+// Checks URL for defined words
+var reg *regexp.Regexp
+func LineContainsCommon(source string) bool {
+	if reg == nil {
+		reg = regexp.MustCompile("(?i)(rumors|twitter|blacklist)")
+	}
+	if reg.FindString(source) != "" {
 		return true
 	}
 	return false
