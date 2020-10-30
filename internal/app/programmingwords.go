@@ -20,6 +20,8 @@ func getProgrammingWords() []string {
 		"ccxt",
 		"rumor",
 		"spreader",
+		"__cfduid",
+		"timestamp_secret",
 		"buffers",
 		"manually",
 		"settingsrepository",

@@ -108,7 +108,7 @@ func MatchKeywords(source string) (matches []Match) {
 		"|hooks.slack.com|pt_token|full_resolution_time_in_minutes" +
 		"|xox[a-zA-Z]-[a-zA-Z0-9-]+" +
 		"|s3\\.console\\.aws\\.amazon\\.com" +
-		"|JEKYLL_GITHUB_TOKEN|codecov_token|connectionstring|consumer_key|github_token|irc_pass|node_env|npmrc _auth" +
+		"|JEKYLL_GITHUB_TOKEN|codecov_token|connectionstring|consumer_key|github_token|irc_pass|NODE_ENV|npmrc _auth" +
 		"|x-api-key|HEROKU_API_KEY)" //|[\\w\\.=-]+@" + regexp.QuoteMeta(result.Query) + ")\\b"
 	regex = regexp.MustCompile(regexString)
 	matchStrings := regex.FindAllString(source, -1)
@@ -116,7 +116,11 @@ func MatchKeywords(source string) (matches []Match) {
 
 		if containsVariablepassword(match) {
 				continue
-			}
+		}
+
+		if LineContainsCommon(source) {
+				continue
+		}
 
 		matches = append(matches, Match{
 			KeywordType: "keyword",
@@ -349,7 +353,7 @@ func GetMatchesForString(source string, result RepoSearchResult) (matches []Matc
 		}
 		regex := regexp.MustCompile("(alexa|urls|adblock|domain|dns|top1000|top-1000|httparchive" +
 			"|blacklist|hosts|blacklists|rumor|ads|whitelist|crunchbase|tweets|tld|hosts\\.txt" +
-			"|host\\.txt|aquatone|recon-ng|hackerone|bugcrowd|xtreme|list|tracking|malicious|ipv(4|6)|host\\.txt)")
+			"|host\\.txt|aquatone|recon-ng|hackerone|bugcrowd|xtreme|timestamp_secret|list|tracking|malicious|ipv(4|6)|host\\.txt)")
 		fileNameMatches := regex.FindAllString(result.File, -1)
 		CheckErr(err)
 		if len(fileNameMatches) > 0 {
@@ -396,7 +400,7 @@ var rag *regexp.Regexp
 
 func containsVariablepassword(str string) bool {
 	if rag == nil {
-		rag = regexp.MustCompile("(?i)((env\\.)|(config\\.)|(secrets\\.)|(timestamp_secret)|(refresh_token))")
+		rag = regexp.MustCompile("(?i)((env\\.)|(config\\.)|(secrets\\.)|(timestamp_secret)|(refresh_token)|(__cfduid)|(slovakia)|(coinmarketcap)|(uuid))")
 	}
 	if rag.FindString(str) != "" {
 		return true
@@ -408,7 +412,7 @@ func containsVariablepassword(str string) bool {
 var reg *regexp.Regexp
 func LineContainsCommon(source string) bool {
 	if reg == nil {
-		reg = regexp.MustCompile("(?i)(rumors|twitter|blacklist)")
+		reg = regexp.MustCompile("(?i)(rumors|twitter|blacklist|ICO|package|lykke)")
 	}
 	if reg.FindString(source) != "" {
 		return true
