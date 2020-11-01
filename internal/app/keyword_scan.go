@@ -107,8 +107,8 @@ func MatchKeywords(source string) (matches []Match) {
 		"|db_username|db_password|socks5:" +
 		"|hooks.slack.com|pt_token|full_resolution_time_in_minutes" +
 		"|xox[a-zA-Z]-[a-zA-Z0-9-]+" +
-		"|s3\\.console\\.aws\\.amazon\\.com" +
-		"|JEKYLL_GITHUB_TOKEN|codecov_token|connectionstring|consumer_key|github_token|irc_pass|NODE_ENV|npmrc _auth" +
+		"|s3\\.console\\.aws\\.amazon\\.com|rds\\.amazonaws\\.com" +
+		"|JEKYLL_GITHUB_TOKEN|codecov_token|connectionstring|consumer_key|github_token|irc_pass" +
 		"|x-api-key|HEROKU_API_KEY)" //|[\\w\\.=-]+@" + regexp.QuoteMeta(result.Query) + ")\\b"
 	regex = regexp.MustCompile(regexString)
 	matchStrings := regex.FindAllString(source, -1)
@@ -132,7 +132,7 @@ func MatchKeywords(source string) (matches []Match) {
 }
 
 // MatchAPIKeys takes a string and checks if it contains API keys using pattern matching and entropy checking.
-func MatchAPIKeys(source string) (matches []Match) {
+func MatchAPIKeys(source string, result RepoSearchResult) (matches []Match) {
 	if GetFlags().NoAPIKeys || source == "" {
 		return matches
 	}
@@ -143,7 +143,7 @@ func MatchAPIKeys(source string) (matches []Match) {
 	if base64Strings != nil {
 		for _, match := range base64Strings {
 			decoded, _ := b64.StdEncoding.DecodeString(match)
-			decodedMatches := MatchAPIKeys(string(decoded))
+			decodedMatches := MatchAPIKeys(string(decoded), result)
 
 			for _, decodedMatch := range decodedMatches {
 				matches = append(matches, decodedMatch)
@@ -151,7 +151,7 @@ func MatchAPIKeys(source string) (matches []Match) {
 		}
 	}
 
-	regexString := "(?i)(ACCESS|SECRET|LICENSE|CRYPT|PASS|API|ADMIN|TOKEN|PWD|UID|Authorization|Bearer|database|db|username|host|gitlab)[\\w\\s:=\"']{0,10}[=:\\s'\"]([\\w\\-+=\"']{5,})"
+	regexString := "(?i)(ACCESS|SECRET|LICENSE|CRYPT|PASS|API|ADMIN|TOKEN|PWD|UID|Authorization|Bearer|database|db|username|host|gitlab|jdbc:)[\\w\\s:=\"']{0,10}[=:\\s'\"]([\\w-+=\"']{5,})"
 	regex = regexp.MustCompile(regexString)
 	matchStrings := regex.FindAllStringSubmatch(source, -1)
 	for _, match := range matchStrings {
@@ -168,7 +168,9 @@ func MatchAPIKeys(source string) (matches []Match) {
 				continue
 			}
 			
-			if LineContainsCommon(source) {
+			regex := regexp.MustCompile("(?i)(rumors|twitter|blacklist|ICO|lykke|package\\.json)")
+			fileNameMatches := regex.FindAllString(result.File, -1)
+			if len(fileNameMatches) > 0 {
 				continue
 			}
 
@@ -177,7 +179,35 @@ func MatchAPIKeys(source string) (matches []Match) {
 				Text:        string(match[2]),
 				Line:        GetLine(source, match[2]),
 			})
+
+			continue
 		}
+
+		
+		if containsSequence(match[2]) {
+			continue
+		}
+
+		if containsCommonWord(match[2]) {
+			continue
+		}
+
+		if containsVariablepassword(match[2]) {
+			continue
+		}
+			
+		regex := regexp.MustCompile("(?i)(rumors|twitter|blacklist|ICO|lykke|package\\.json)")
+		fileNameMatches := regex.FindAllString(result.File, -1)
+		if len(fileNameMatches) > 0 {
+			continue
+		}
+
+		matches = append(matches, Match{
+			KeywordType: "apiKey",
+			Text:        string(match[2]),
+			Line:        GetLine(source, match[2]),
+		})
+		
 	}
 	return matches
 }
@@ -309,7 +339,7 @@ func GetMatchesForString(source string, result RepoSearchResult) (matches []Matc
 		}
 	}
 	if !GetFlags().NoAPIKeys {
-		for _, match := range MatchAPIKeys(source) {
+		for _, match := range MatchAPIKeys(source, result) {
 			matches = append(matches, match)
 			score += 2
 		}
@@ -324,10 +354,10 @@ func GetMatchesForString(source string, result RepoSearchResult) (matches []Matc
 		}
 	}
 	if !GetFlags().NoScoring {
-		matched, err := regexp.MatchString("(?i)(phishing|defenceblocklist|block|list|rumors|h1domains|bugbounty|bug-bounty|bounty-targets|url_short|url_list|alexa|twitter|blacklists|blacklist)", result.Repo+result.File)
+		matched, err := regexp.MatchString("(?i)(phishing|defenceblocklist|block|list|rumors|h1domains|bugbounty|bug-bounty|bounty-targets|url_short|url_list|alexa|twitter|blacklist)", result.Repo+result.File)
 		CheckErr(err)
 		if matched {
-			score -= 5
+			score -= 4
 		}
 		matched, err = regexp.MatchString("(?i)(\\.md|\\.csv)$", result.File)
 		CheckErr(err)
@@ -343,17 +373,17 @@ func GetMatchesForString(source string, result RepoSearchResult) (matches []Matc
 			matched, err = regexp.MatchString("(?i)\\.(json|yml|py|rb|java|go|php|xml|env|js)$", result.File)
 			CheckErr(err)
 			if matched {
-				score++
+				score+=3
 			}
 			matched, err = regexp.MatchString("(?i)\\.(htpasswd|ftpconfig|mysql_history)$", result.File)
 			CheckErr(err)
 			if matched {
-				score += 3
+				score += 10
 			}
 		}
-		regex := regexp.MustCompile("(alexa|urls|adblock|domain|dns|top1000|top-1000|httparchive" +
-			"|blacklist|hosts|blacklists|rumor|ads|whitelist|crunchbase|tweets|tld|hosts\\.txt" +
-			"|host\\.txt|aquatone|recon-ng|hackerone|bugcrowd|xtreme|timestamp_secret|list|tracking|malicious|ipv(4|6)|host\\.txt)")
+		regex := regexp.MustCompile("(alexa|urls|adblock|top1000|top-1000|httparchive" +
+			"|blacklists|rumor|ads|whitelist|crunchbase|tweets|tld|hosts\\.txt" +
+			"|host\\.txt|aquatone|recon-ng|hackerone|bugcrowd|xtreme|timestamp_secret|list|tracking|malicious|ipv(4|6))")
 		fileNameMatches := regex.FindAllString(result.File, -1)
 		CheckErr(err)
 		if len(fileNameMatches) > 0 {
@@ -400,7 +430,7 @@ var rag *regexp.Regexp
 
 func containsVariablepassword(str string) bool {
 	if rag == nil {
-		rag = regexp.MustCompile("(?i)((env\\.)|(config\\.)|(secrets\\.)|(timestamp_secret)|(refresh_token)|(__cfduid)|(slovakia)|(coinmarketcap)|(uuid))")
+		rag = regexp.MustCompile("(?i)((env\\.)|(config\\.)|(secrets\\.)|(passed)|(timestamp_secret)|(refresh_token)|(__cfduid)|(slovakia)|(coinmarketcap)|(uuid))")
 	}
 	if rag.FindString(str) != "" {
 		return true
@@ -412,7 +442,7 @@ func containsVariablepassword(str string) bool {
 var reg *regexp.Regexp
 func LineContainsCommon(source string) bool {
 	if reg == nil {
-		reg = regexp.MustCompile("(?i)(rumors|twitter|blacklist|ICO|package|lykke)")
+		reg = regexp.MustCompile("(?i)(rumors|twitter|blacklist|ICO|package|lykke|passed|package\\.json)")
 	}
 	if reg.FindString(source) != "" {
 		return true
